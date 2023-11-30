@@ -1,0 +1,55 @@
+From dfe2d17a5cd60e4f55776478fb70da71be17e6a6 Mon Sep 17 00:00:00 2001
+From: Artur Kowalski <artur.kowalski@3mdeb.com>
+Date: Thu, 28 Sep 2023 18:43:54 +0200
+Subject: [PATCH] Use pkg-config to find devmapper include directories
+
+This is needed for cross-compiling.
+
+Signed-off-by: Artur Kowalski <artur.kowalski@3mdeb.com>
+---
+ devicemapper-rs-sys/Cargo.toml | 3 +++
+ devicemapper-rs-sys/build.rs   | 7 +++++++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/devicemapper-rs-sys/Cargo.toml b/devicemapper-rs-sys/Cargo.toml
+index d003c65..e6efef3 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -30,6 +30,9 @@ repository = "https://github.com/stratis-storage/devicemapper-rs"
+ license = "MPL-2.0"
+ repository = "https://github.com/stratis-storage/devicemapper-rs"
+ 
++[build-dependencies]
++pkg-config = "0.3.27"
++
+ [dependencies.nix]
+ version = "0.26.0"
+ 
+diff --git a/devicemapper-rs-sys/build.rs b/devicemapper-rs-sys/build.rs
+index ad3121a..5c24ca7 100644
+--- a/build.rs
++++ b/build.rs
+@@ -7,6 +7,8 @@ use std::{env::var, path::PathBuf};
+ use bindgen::Builder;
+ 
+ fn main() {
++    let library = pkg_config::probe_library("devmapper").unwrap();
++
+     // Generate bindings for dm-ioctl.h and libdevmapper.h
+     let bindings = Builder::default()
+         .header("dm.h")
+@@ -20,6 +22,11 @@ fn main() {
+         .allowlist_type("dm_target_versions")
+         .derive_debug(true)
+         .derive_default(true)
++        .clang_args(
++            library.include_paths
++                .iter()
++                .map(|path| format!("-I{}", path.to_string_lossy())),
++        )
+         .generate()
+         .expect("Could not generate dm.h bindings");
+ 
+-- 
+2.41.0
+
